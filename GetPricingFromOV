@@ -1,0 +1,62 @@
+METHOD calcular_z900.
+    DATA: e_komk   TYPE komk,
+          e_komp   TYPE komp,
+          it_komv  TYPE STANDARD TABLE OF komv,
+          it_komvd TYPE STANDARD TABLE OF komvd.
+
+    SELECT SINGLE *
+      FROM vbak
+      INTO @DATA(e_vbak)
+      WHERE vbeln = @im_vbeln.
+
+    e_komk-belnr = e_vbak-vbeln.
+    e_komk-knumv = e_vbak-knumv.
+    e_komk-vkorg = e_vbak-vkorg.
+    e_komk-vtweg = e_vbak-vtweg.
+    e_komk-spart = e_vbak-spart.
+
+    e_komp-kposn = im_posnr.
+
+    SELECT *
+      FROM vbap
+      INTO TABLE @DATA(it_vbap)
+      WHERE vbeln = @im_vbeln.
+
+    IF sy-subrc EQ 0.
+
+      CALL FUNCTION 'RV_PRICE_PRINT_REFRESH'
+        TABLES
+          tkomv = it_komv.
+
+      DESCRIBE TABLE it_vbap LINES DATA(li_lines).
+
+      IF li_lines = 1.
+
+        CALL FUNCTION 'RV_PRICE_PRINT_HEAD'
+          EXPORTING
+            comm_head_i = e_komk
+          TABLES
+            tkomv       = it_komv
+            tkomvd      = it_komvd.
+
+      ELSE.
+        CALL FUNCTION 'RV_PRICE_PRINT_ITEM'
+          EXPORTING
+            comm_head_i = e_komk
+            comm_item_i = e_komp
+          TABLES
+            tkomv       = it_komv
+            tkomvd      = it_komvd.
+      ENDIF.
+
+      IF it_komv IS NOT INITIAL.
+
+        LOOP AT it_komv ASSIGNING FIELD-SYMBOL(<fs_komv>) WHERE kschl = 'Z900' AND kposn = im_posnr.
+          re_kbetr = re_kbetr + <fs_komv>-kbetr.
+        ENDLOOP.
+        re_kbetr = re_kbetr / 2.
+
+      ENDIF.
+
+    ENDIF.
+  ENDMETHOD.
